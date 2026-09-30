@@ -67,6 +67,10 @@ Host SIL of the generated library on macOS also needs the full Xcode app (not on
 
 `x` is the gap (approach velocity is negative). Positive chaser current attracts. Coils 1–2 are on the +y side and give +yaw; coils 3–4 on −y give −yaw. Positive yaw moves the +y side towards the target. Full definitions in the ICD.
 
+## Licence
+
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
 ## Maintainer
 
 ASTERIA GNC lead. Report issues through this repository.
