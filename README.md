@@ -10,7 +10,7 @@ This repository contains the plant and force model, the estimator and controller
 
 | If you are… | Read |
 | --- | --- |
-| integrating sensors, drivers or firmware | [`docs/ICD.md`](docs/ICD.md) — frames, coil order, signs, rates, the `gnc_step` interface, log format |
+| integrating sensors, drivers or firmware | [`docs/ICD.md`](docs/ICD.md) — numbered requirements, frames, coil order, signs, the `gnc_step` interface, log format |
 | running the bench or the calibration campaign | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
 | tuning the filter on real data | [`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) |
 

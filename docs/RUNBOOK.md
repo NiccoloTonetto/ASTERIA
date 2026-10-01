@@ -97,7 +97,7 @@ The method does; the numbers do not. Scaling every dimension by λ at fixed curr
 | 60 mm | 6.23e-3 m/s² | 0.0364° | 0.0109° |
 | 40 mm | 1.46e-2 m/s² | 0.0854° | 0.0256° |
 
-5. **Rig checks:** the checklist in `ICD.md` §7 (coil order, polarity, ToF recess, gyro sign, timing), plus driver drop measured into `P.drv.V_drop`, coil cooldown between runs, magnetic-north alignment, non-magnetic fasteners.
+5. **Rig checks:** the checklist in `ICD.md` §6.1 (coil order, polarity, ToF recess, gyro sign, timing), plus driver drop measured into `P.drv.V_drop`, coil cooldown between runs, magnetic-north alignment, non-magnetic fasteners.
 
 ## 6. Tuning on hardware
 
@@ -157,7 +157,7 @@ Known limits: residual fast arrivals when the real actuator is stronger than mod
 
 | Item | Status |
 | --- | --- |
-| Entry point | `gnc_step`: one 1 kHz tick, EKF + controller, all state owned by the caller; interface in `ICD.md` §4 |
+| Entry point | `gnc_step`: one 1 kHz tick, EKF + controller, all state owned by the caller; interface in `ICD.md` §5.1 |
 | Design | explicit state, scalar sequential measurement updates (algebraically the batch update, no inverse, no variable-size arrays) |
 | Target library | `build_target`: Embedded Coder, ARM Cortex-M, 27 files, 47.5 kB of C |
 | Parameters | 36 kB constant (reference tables at 401 points; the Monte Carlo is unchanged from 4001 points) |

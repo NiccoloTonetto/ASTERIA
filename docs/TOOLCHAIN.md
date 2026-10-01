@@ -1,6 +1,6 @@
 # Replay and identification toolchain
 
-Companion to `RUNBOOK.md` (§6 Tuning on hardware) and `ICD.md` (§5 Log format). The runbook is the procedure; this document is the tooling, what it has been proven to do, and what the proofs showed was wrong.
+Companion to `RUNBOOK.md` (§6 Tuning on hardware) and `ICD.md` (§5.2 Log record). The runbook is the procedure; this document is the tooling, what it has been proven to do, and what the proofs showed was wrong.
 
 **Goal:** extract the model from the data instead of tuning the filter until it stops complaining. Every parameter is measured or fitted from a log, with an independent cross-check where one exists. The filter's noise parameters are touched last.
 
