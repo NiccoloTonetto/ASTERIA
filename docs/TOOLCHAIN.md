@@ -1,6 +1,6 @@
 # Replay and identification toolchain
 
-Companion to `RUNBOOK.md` (§6 Tuning on hardware) and `ICD.md` (§5.2 Log record). The runbook is the procedure; this document is the tooling, what it has been proven to do, and what the proofs showed was wrong.
+Companion to `RUNBOOK.md` (§6 Tuning on hardware) and `ICD.md` (§5.2 Log record). The runbook is the procedure; this document describes the tools, their validation against known truth, and the defects that validation found.
 
 **Goal:** extract the model from the data instead of tuning the filter until it stops complaining. Every parameter is measured or fitted from a log, with an independent cross-check where one exists. The filter's noise parameters are touched last.
 
@@ -9,7 +9,7 @@ Companion to `RUNBOOK.md` (§6 Tuning on hardware) and `ICD.md` (§5.2 Log recor
 | Tool | Does |
 | --- | --- |
 | `make_log(P, scenario, c, file)` | Hardware-format log from the simulator with injected truth: force scale, softening, mass, tilt, gyro/accel bias, per-sensor ToF offset and scale, latency, coil current lag, noise. Scenarios `rest`, `drift` (`x_start`, `v0`), `pulse`, `approach` |
-| `replay_ekf(file, P)` | Re-runs the EKF on a log with measured currents; per channel: innovation bias, NIS, whiteness; true error when truth is present |
+| `replay_ekf(file, P)` | Re-runs the EKF on a log with measured currents; per channel: innovation bias, NIS, whiteness (max autocorrelation over lags 1–20 against 3.02/√N); true error when truth is present |
 | `identify_from_log(file, P, stage)` | `rest`: sensor offset/scale/noise, IMU biases. `drift`: tilt (parabola + EKF). `latency`: delay, **against truth only**. `pulse`: force scale jointly with initial state |
 | `test_replay`, `test_precision`, `test_sil`, `test_sil_lib` | Validation ladder and code verification |
 
