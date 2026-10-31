@@ -1,7 +1,7 @@
-%% test_replay.m  --  prove the replay toolchain against known truth (V1..V5)
-% Each case injects a fault the filter is never told about, then checks that the replay's three
-% acceptance tests fail in the predicted way. If a fault does not produce its signature, the
-% diagnostics table in the runbook is decorative and must be fixed before hardware.
+%% test_replay.m  --  replay toolchain against known truth (V5 fault injection)
+% Each case injects a fault unknown to the filter and reports the replay's three tests.
+% run_all_tests requires: no fault consistent, ToF offset and force scale flagged.
+% Writes the logs v5_*.csv used by test_precision, test_sil and test_sil_lib.
 assert(isfield(P,'ref'), 'run bench_init_3dof, optimize_maneuver, build_schedule first');
 c0 = struct('fscale',1,'x0',P.cal.x0,'m',P.m,'tilt',[0;0;0],'gbias',0,'abias',0, ...
             'tof_off',[0;0],'tof_sc',[1;1],'latency',0,'seed',1);

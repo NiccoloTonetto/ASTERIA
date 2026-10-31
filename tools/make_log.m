@@ -2,7 +2,7 @@ function make_log(P, scenario, c, outfile)
 % MAKE_LOG  Write a hardware-format log from the simulator, with truth injected.
 %   make_log(P, scenario, c, outfile)
 %   scenario: 'rest' | 'drift' | 'pulse' | 'approach'   (stages S1, S2, S3, S5)
-%   c: TRUTH deviations the replay is supposed to discover, none of which the filter is told:
+%   c: truth deviations, unknown to the filter:
 %      c.fscale  force scale        c.x0      softening length [m]
 %      c.m       mass [kg]          c.tilt    [3x1] disturbance (tilt etc.)
 %      c.gbias   gyro bias [rad/s]  c.abias   accelerometer bias [m/s^2]
@@ -11,11 +11,11 @@ function make_log(P, scenario, c, outfile)
 %      c.latency ToF measurement delay [s]
 %      c.seed    noise seed         c.gaps    (rest only) clamped gaps [m]
 %      c.i_pulse (pulse only) [amplitude A, start s, stop s]
-%   The CSV has exactly the channels a flight-standard log would have, plus truth_* columns
-%   that on hardware come from the validation camera (or not at all).
+%   The CSV has the channels of a hardware log (ICD 5.2) plus truth_* columns, which on
+%   hardware come from the validation camera.
 rng(c.seed);
 dt = P.Ts;  n_tof = numel(P.tof.b);
-Pp = P;                                          % TRUTH plant
+Pp = P;                                          % truth plant
 Pp.coil.q_perA = P.coil.q_perA*sqrt(c.fscale);
 Pp.cal.x0 = c.x0;  Pp.m = c.m;  Pp.J = P.J*c.m/P.m;
 
@@ -31,9 +31,8 @@ nd = round(c.latency/dt);                        % delay in loop ticks
 buf = zeros(6, nd+1);                            % ring of past true states
 
 s  = [P.ref.x(1); 0; 0; 0; 0; 0];
-% 'drift' accepts a start gap and an initial velocity: a slow release identifies the tilt,
-% a fast coast identifies the ToF latency. A drift from rest cannot do the latter -- the
-% float never moves fast enough for a delay to show above the range noise.
+% 'drift' takes a start gap and initial velocity: slow release for the tilt, fast coast for
+% the ToF latency
 if isfield(c,'x_start'), s(1) = c.x_start; end
 if isfield(c,'v0'),      s(4) = c.v0;      end
 if strcmpi(scenario,'rest'), s(1) = c.gaps(1); end

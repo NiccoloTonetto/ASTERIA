@@ -1,7 +1,6 @@
-%% build_target.m  --  standalone C library for the flight computer (Embedded Coder)
-% Generates portable C for ARM Cortex-M from gnc_step (EKF + controller), without compiling it for
-% the target -- that is the firmware toolchain's job. Also builds a host SIL version of the SAME
-% library so test_sil_lib can prove the generated code against MATLAB before it goes near a board.
+%% build_target.m  --  C library of gnc_step for the flight computer (Embedded Coder)
+% Generates ARM Cortex-M C code (not compiled here) and a host SIL build of the same library
+% for test_sil_lib. Host SIL on macOS needs the full Xcode app.
 assert(isfield(P,'sched'), 'run bench_init_3dof, optimize_maneuver, build_schedule first');
 pc = make_cg_params(P);
 ex = {zeros(10,1), zeros(10), zeros(3), 0, zeros(4,1), zeros(4,1), 0, pc};

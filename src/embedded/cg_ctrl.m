@@ -1,10 +1,10 @@
 function [i_cmd, i_app] = cg_ctrl(xh, t, pc) %#codegen
-% CG_CTRL  Code-generation version of asteria_ctrl: scheduled LQR + feedforward + trim.
+% CG_CTRL  Code-generation version of asteria_ctrl (scheduled LQR, feedforward, trim).
 tt    = min(t, pc.ref_T);
 x_ref = interp1(pc.ref_t, pc.ref_x, tt, 'linear', 'extrap');
 v_ref = interp1(pc.ref_t, pc.ref_v, tt, 'linear', 'extrap');
 i_ff  = interp1(pc.ref_t, pc.ref_i, tt, 'linear', 0);
-% Terminal phase: path-following at the estimated gap (see asteria_ctrl).
+% path-following inside path_gate, as in asteria_ctrl
 if xh(1) < pc.path_gate
     xg    = min(max(xh(1), pc.ref_xp(1)), pc.ref_xp(end));
     v_ref = interp1(pc.ref_xp, pc.ref_vp, xg, 'linear');

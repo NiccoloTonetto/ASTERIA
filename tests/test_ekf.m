@@ -1,8 +1,7 @@
-%% test_ekf.m  --  EKF against PERFECT STATE, open loop (no feedback yet)
-% Truth is propagated with the same plant, driven by the optimised reference current profile;
-% the EKF sees only sensors. Four cases: clean, noise, disturbance, both. Then a with/without
-% gyro comparison, which is the point of the 10th state.
-% Run after bench_init_3dof and optimize_maneuver.
+%% test_ekf.m  --  EKF against truth, open loop
+% Truth driven by the reference currents; the EKF sees only the sensors. Cases: clean, noise,
+% disturbance, both; each with and without the gyro. Run after bench_init_3dof and
+% optimize_maneuver.
 
 assert(isfield(P,'ref'), 'run optimize_maneuver first');
 P_save = P;

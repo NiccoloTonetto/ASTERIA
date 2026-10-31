@@ -1,6 +1,6 @@
 function i_cmd = sl_ctrl(xh, t)
-% Simulink wrapper for the gain-scheduled controller. Saturation is a separate block, so what
-% this returns is the COMMANDED current; the EKF must be fed the saturated one.
+% SL_CTRL  Simulink wrapper for asteria_ctrl. Returns the commanded current; saturation is a
+%   separate block and the EKF is fed its output.
 persistent P
 if isempty(P), P = evalin('base','P'); end
 i_cmd = asteria_ctrl(xh, t, P);

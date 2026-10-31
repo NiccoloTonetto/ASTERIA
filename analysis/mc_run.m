@@ -1,17 +1,17 @@
 function r = mc_run(P, c)
-% MC_RUN  One closed-loop approach with a TRUTH plant that differs from the model.
-%   The controller, estimator and reference always use the nominal P -- that is the point.
-%   c.fscale  force multiplier of the truth plant (pole strength scales as sqrt)
-%   c.x0      truth softening length [m] (near-field gradient steepness)
-%   c.m       truth float mass [kg] (inertia scales with it)
-%   c.d       [3x1] truth disturbance (table tilt etc.)
-%   c.gbias   truth gyro bias [rad/s]
-%   c.seed    noise seed
-%   c.latency truth ToF delay [s] (default P.test.tof_latency). The filter's own belief is
-%             P.tof.latency; keeping the two separate is what lets the compensation be tested.
-% Realism matched to make_log: the ranges are delayed, the coil current lags the command
-% through L/R, and the EKF is fed the MEASURED (lagged, noisy) current, as on hardware.
-clear asteria_ekf                                  % no Jacobian carried over from a previous run
+% MC_RUN  One closed-loop approach against a truth plant that differs from the nominal P.
+%   r = mc_run(P, c)
+%   c.fscale   force multiplier of the truth plant (pole strength scaled by its square root)
+%   c.x0       truth softening length [m]
+%   c.m        truth float mass [kg] (inertia scaled with it)
+%   c.d        [3x1] truth disturbance accelerations
+%   c.gbias    truth gyro bias [rad/s]
+%   c.seed     noise seed
+%   c.latency  truth ToF delay [s], default P.test.tof_latency (the filter assumes P.tof.latency)
+%   r          contact, v_end, t_end, sat (fraction of ticks saturated), rms_trk, y_end, th_end
+% As in make_log: delayed ranges, coil current lagging the command through L/R, and the EKF fed
+% the measured (lagged, noisy) current.
+clear asteria_ekf                                  % reset the cached Jacobian
 rng(c.seed);
 if ~isfield(c,'latency'), c.latency = P.test.tof_latency; end
 Pp = P;                                            % truth plant
@@ -31,7 +31,7 @@ while s(1) > 1e-4 && k*dt < t_max
     k = k+1;  t = (k-1)*dt;
     [ic, ia] = asteria_ctrl(xh, t, P);
     nsat = nsat + any(abs(ic) > P.i_sat + 1e-12);
-    i_coil = a_lag*i_coil + (1-a_lag)*ia;          % what actually flows in the coils
+    i_coil = a_lag*i_coil + (1-a_lag)*ia;          % coil current after the L/R lag
     f = @(ss) asteria_plant(t, ss, i_coil, Pp, c.d);
     k1=f(s); k2=f(s+dt/2*k1); k3=f(s+dt/2*k2); k4=f(s+dt*k3);
     s = s + dt/6*(k1+2*k2+2*k3+k4);

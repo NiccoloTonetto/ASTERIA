@@ -1,6 +1,6 @@
-%% test_plant.m  --  validate asteria_plant/asteria_wrench before anything is built on top
-% Every check is a physical invariant, not a regression against stored numbers. Run after
-% bench_init_3dof. A FAIL here means the plant is wrong; do not proceed to the estimator.
+%% test_plant.m  --  physical invariants of asteria_wrench and asteria_plant
+% Checks invariants, not stored numbers. Run after bench_init_3dof. A FAIL means the plant
+% model is wrong.
 
 assert(exist('P','var')==1, 'run bench_init_3dof first');
 res  = true(0);
@@ -19,9 +19,8 @@ Wm = asteria_wrench(P, [0.04;0;0], i4(-0.2));
 ok = Wp(1) < 0 && Wm(1) > 0 && abs(Wp(1)+Wm(1))/abs(Wp(1)) < 1e-12;  res(end+1) = ok;
 fprintf('%s  current sign reverses the force (Fx = %+.3f / %+.3f mN)\n', ...
         pass(ok), 1e3*Wp(1), 1e3*Wm(1));
-% With the target held at a fixed bias the wrench is LINEAR in the chaser currents. Under the
-% old symmetric drive it was quadratic and attract-only; these two checks are what tells the
-% two configurations apart, so they are the first thing to look at if the rig misbehaves.
+% target-bias drive: wrench linear in the chaser currents and reversing with them
+% (the symmetric drive would be quadratic and attract-only)
 i1 = [0.1;0.2;-0.05;0.15];
 ok = norm(asteria_wrench(P,[0.04;0;0],2*i1) - 2*asteria_wrench(P,[0.04;0;0],i1)) ...
      / norm(asteria_wrench(P,[0.04;0;0],i1)) < 1e-12;  res(end+1) = ok;
@@ -38,7 +37,7 @@ err = norm([Wa(1)-Wb(1); Wa(2)+Wb(2); Wa(3)+Wb(3)])/norm(Wa);
 ok = err < 1e-9;  res(end+1) = ok;
 fprintf('%s  mirror symmetry in (y,th) (rel. error %.1e)\n', pass(ok), err);
 
-%% 5. Energy: drop test at fixed current vs the work integral
+%% 4. Energy: drop test at fixed current vs the work integral
 i_d = i4(P.i_max);
 opt = odeset('Events', @(t,s) contact(t,s), 'RelTol',1e-10, 'AbsTol',1e-12);
 sol = ode45(@(t,s) asteria_plant(t,s,i_d,P,zero), [0 500], [0.10;0;0;0;0;0], opt);
@@ -52,10 +51,10 @@ ok = err < 2e-3;  res(end+1) = ok;
 fprintf('%s  energy closes on a drop test (KE vs work, rel. error %.2e)\n', pass(ok), err);
 fprintf('       contact after %.1f s at %.1f mm/s\n', sol.x(end), 1e3*abs(v_end));
 
-%% 6. Lateral mode frequency matches the linearised stiffness
+%% 5. Lateral mode frequency matches the linearised stiffness
 i_l = i4(P.des.i);
 s0  = [P.des.x; 2e-3; 0; 0; 0; 0];
-mask_y = [0;1;0;0;1;0];   % free the lateral DoF only: yaw is unstable and would swamp the run
+mask_y = [0;1;0;0;1;0];   % lateral DoF only (yaw is unstable)
 sol = ode45(@(t,s) asteria_plant_masked(t,s,i_l,P,mask_y), [0 60], s0, odeset('RelTol',1e-10,'AbsTol',1e-12));
 tv  = linspace(0,60,20001);
 yy  = deval(sol, tv); yy = yy(2,:);
@@ -66,18 +65,18 @@ err = abs(Tm-Tp)/Tp;  ok = err < 5e-2;  res(end+1) = ok;
 fprintf('%s  lateral period %.2f s measured vs %.2f s predicted (%.1f%%)\n', ...
         pass(ok), Tm, Tp, 100*err);
 
-%% 7. Yaw divergence rate matches the linearised stiffness
+%% 6. Yaw divergence rate matches the linearised stiffness
 mask_th = [0;0;1;0;0;1];
 th0 = 1e-4;
-s0  = [P.des.x; 0; th0; 0; 0; P.mode.th_pole*th0];   % start ON the unstable eigenvector, else the
-sol = ode45(@(t,s) asteria_plant_masked(t,s,i_l,P,mask_th), [0 6], s0, ...   % cosh transient biases the fit
+s0  = [P.des.x; 0; th0; 0; 0; P.mode.th_pole*th0];   % start on the unstable eigenvector
+sol = ode45(@(t,s) asteria_plant_masked(t,s,i_l,P,mask_th), [0 6], s0, ...
             odeset('RelTol',1e-11,'AbsTol',1e-14));
 tt  = linspace(2,6,500);  th = deval(sol,tt); th = th(3,:);
 lam = polyfit(tt, log(th), 1);  lam = lam(1);
 ok  = abs(lam - P.mode.th_pole)/P.mode.th_pole < 5e-2;  res(end+1) = ok;
 fprintf('%s  yaw divergence %.3f rad/s measured vs %.3f predicted\n', pass(ok), lam, P.mode.th_pole);
 
-%% 8. The control Jacobian is rank 2: axial force and yaw torque, lateral tied to them
+%% 7. The control Jacobian is rank 2: axial force and yaw torque, lateral tied to them
 Bi = zeros(3,P.n_coil);  hh = 1e-5;  i0 = P.des.i*ones(P.n_coil,1);
 for k = 1:P.n_coil
     ip = i0; ip(k) = ip(k)+hh;  im = i0; im(k) = im(k)-hh;
@@ -98,6 +97,6 @@ function [val, ter, dir] = contact(~, s)
 val = s(1);  ter = 1;  dir = -1;
 end
 function ds = asteria_plant_masked(t, s, i, P, mask)
-% integrate only the DoF selected by mask, to isolate one mode at a time
+% integrate only the DoF selected by mask
 ds = asteria_plant(t, s, i, P, [0;0;0]) .* mask;
 end

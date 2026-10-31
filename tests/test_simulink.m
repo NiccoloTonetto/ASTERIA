@@ -1,7 +1,6 @@
-%% test_simulink.m  --  the generated Simulink model: embedded blocks vs the validated extrinsic blocks
-% Builds asteria_model twice -- once with the EKF and Controller blocks calling the code-generation
-% functions directly (what gets compiled for the target), once with the original extrinsic wrappers
-% -- runs both on the same noise seed and requires them to agree.
+%% test_simulink.m  --  Simulink model with embedded blocks vs extrinsic blocks
+% Builds asteria_model with the code-generation EKF and controller, and with the extrinsic
+% wrappers, runs both on the same noise seed and requires them to agree.
 assert(isfield(P,'sched'), 'run bench_init_3dof, optimize_maneuver, build_schedule first');
 P.sim.embedded = false;  evalc('run(''build_simulink_model.m'')');  rng(1);  oX = sim('asteria_model');
 P.sim.embedded = true;   evalc('run(''build_simulink_model.m'')');  rng(1);  oE = sim('asteria_model');

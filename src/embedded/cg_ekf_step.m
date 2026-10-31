@@ -1,10 +1,9 @@
 function [xh, Pk, Kp] = cg_ekf_step(xh, Pk, Kp, i, z, pc, recompute) %#codegen
-% CG_EKF_STEP  Embedded EKF step, code-generation compatible.
-%   All state is explicit (xh, Pk and the cached pose Jacobian Kp in and out): nothing hidden in
-%   persistent variables, so the step is a pure function and can be tested against a log.
-%   Measurements are applied as SCALAR updates, one channel at a time, all linearised at the
-%   prior. With a diagonal R this is algebraically identical to asteria_ekf's batch update, but
-%   needs no matrix inverse and no variable-size arrays. z uses NaN for "no new sample".
+% CG_EKF_STEP  Code-generation version of asteria_ekf.
+%   [xh, Pk, Kp] = cg_ekf_step(xh, Pk, Kp, i, z, pc, recompute)
+%   All state is passed in and out (no persistent variables). Measurements are applied as
+%   sequential scalar updates linearised at the prior: equal to the batch update for diagonal
+%   Rd, with no matrix inverse and no variable-size arrays. NaN in z = no new sample.
 Minv = diag([1/pc.m, 1/pc.m, 1/pc.J]);
 hp = 1e-6;
 if recompute
@@ -34,7 +33,7 @@ if any(~isnan(z))
     for j = 1:4
         if ~isnan(z(j))
             Hj  = H(j,:);
-            nu  = z(j) - h0(j) - Hj*(xh - x0);     % innovation against the SAME linearisation
+            nu  = z(j) - h0(j) - Hj*(xh - x0);     % innovation about the prior linearisation
             Sj  = Hj*Pk*Hj.' + pc.Rd(j);
             Kj  = (Pk*Hj.')/Sj;
             xh  = xh + Kj*nu;
@@ -47,7 +46,7 @@ end
 end
 
 function h = hdel(pc, s)
-% measurement predicted from the pose one sensor latency ago
+% measurement predicted from the pose one sensor latency earlier
 tau = pc.tof_latency;
 sd  = [s(1:3) - tau*s(4:6); s(4:10)];
 h   = cg_meas(pc, sd);

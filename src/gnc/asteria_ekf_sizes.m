@@ -1,7 +1,8 @@
 function P = asteria_ekf_sizes(P)
-% ASTERIA_EKF_SIZES  Build the EKF dimensions and covariances from the sensor configuration.
-% Separate from bench_init so a sensor flag can be flipped and the filter rebuilt in one call.
-% State: [x y th vx vy om dx dy dth bg] -- 10, with the gyro bias last.
+% ASTERIA_EKF_SIZES  EKF initial state, P0, Qd and Rd from the sensor configuration.
+%   P = asteria_ekf_sizes(P), called by bench_init_3dof and after changing a sensor flag.
+%   State [x y th vx vy om dx dy dth bg].
+%   Qd entries are (sigma*Ts)^2 per step; Rd holds the per-sample sensor variances.
 n_tof = numel(P.tof.b);
 P.ekf.n  = 10;
 P.ekf.x0 = [P.traj.x0; zeros(9,1)];

@@ -1,10 +1,7 @@
-%% test_precision.m  --  V6: does the filter survive single-precision storage?
-% The covariance spans roughly seven orders of magnitude (position variance ~1e-10 m^2 against
-% disturbance terms ~1e-3) and single precision keeps about seven significant digits. This
-% replays a log twice, once keeping the state and covariance in double and once rounding both
-% to single after every step, and compares. It tests STORAGE precision, not single-precision
-% arithmetic: it will reveal a dynamic-range problem but not accumulated rounding inside the
-% arithmetic, which only a genuine single-precision build or SIL run can show.
+%% test_precision.m  --  V6: EKF with single-precision storage
+% Replays a log twice, with state and covariance kept in double and rounded to single after
+% every step, and compares the estimates. Covers storage precision only, not single-precision
+% arithmetic. Needs the logs written by test_replay.
 assert(isfield(P,'ref'), 'run bench_init_3dof, optimize_maneuver, build_schedule first');
 logfile = 'v5_1.csv';
 assert(exist(logfile,'file')==2, 'run test_replay first to create the logs');

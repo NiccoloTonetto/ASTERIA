@@ -1,28 +1,26 @@
-%% monte_carlo.m  --  robustness of the architecture across force-model uncertainty
-% The placeholder force model is defensible only if the architecture holds across the range of
-% forces the real hardware could plausibly produce. This study draws a TRUTH plant from that
-% range and flies the nominal controller, estimator and reference against it -- nothing on the
-% GNC side is retuned per sample.
+%% monte_carlo.m  --  closed-loop robustness to plant uncertainty
+% Run after bench_init_3dof, optimize_maneuver, build_schedule. Uses parfor if available.
+% Each run draws a truth plant and flies the nominal controller, estimator and reference
+% against it (nothing retuned per run). Fixed seed: every call draws the same scenarios.
 %
 % Uncertainties (independent, uniform unless noted):
-%   force scale     log-uniform 0.3x .. 3x      overall actuator strength (the dominant unknown)
-%   softening x0    2 .. 8 mm                    near-field gradient steepness
-%   float mass      +-20 %                       inertia scales with it
-%   table tilt      +-P.mc.tilt_deg on x and y   the levelling spec
+%   force scale     log-uniform over P.mc.fs_range
+%   softening x0    2 .. 8 mm
+%   float mass      +-20 % (inertia scaled with it)
+%   table tilt      +-P.mc.tilt_deg on x and y
 %   gyro bias       +-0.5 deg/s
-%   sensor noise    independent seed per run
-% PASS = contact reached AND arrival velocity within P.mc.v_tol of the target.
-% Run after bench_init_3dof, optimize_maneuver, build_schedule. Uses parfor if available.
+%   sensor noise    seed per run
+% Pass: contact reached with arrival velocity within P.mc.v_tol of P.traj.vf.
+% Output: mc_results.mat (table T) and a printed summary.
 
 assert(isfield(P,'sched'), 'run build_schedule first');
-% Defaults; set any of these in P.mc BEFORE running to override (e.g. the post-calibration case).
+% defaults, overridden by fields already set in P.mc
 if ~isfield(P,'mc'), P.mc = struct(); end
 if ~isfield(P.mc,'N'),        P.mc.N        = 300;       end
-if ~isfield(P.mc,'tilt_deg'), P.mc.tilt_deg = 0.002;     end   % levelling spec being tested
+if ~isfield(P.mc,'tilt_deg'), P.mc.tilt_deg = 0.002;     end   % [deg] levelling spec
 if ~isfield(P.mc,'v_tol'),    P.mc.v_tol    = 0.010;     end   % [m/s] arrival spec: -20 +- 10 mm/s
-if ~isfield(P.mc,'fs_range'), P.mc.fs_range = [0.3 3];   end   % truth force scale, log-uniform:
-                                   % [0.3 3] = flying on the uncalibrated model,
-                                   % [0.8 1.25] = residual error after a +-20% 1v1 calibration
+if ~isfield(P.mc,'fs_range'), P.mc.fs_range = [0.3 3];   end   % force scale: [0.3 3] uncalibrated,
+                                   % [0.8 1.25] after the 1v1 calibration
 N = P.mc.N;  lo = P.mc.fs_range(1);  hi = P.mc.fs_range(2);
 rng(2026);
 fs  = exp(log(lo) + (log(hi)-log(lo))*rand(N,1));
@@ -79,7 +77,7 @@ for k = 1:numel(xe)-1
     fprintf('  %2.0f .. %2.0f mm %8d %7.0f%%\n', xe(k), xe(k+1), sum(sel), 100*mean(T.pass(sel)));
 end
 
-% the force band the architecture holds, as a single number for the runbook
+% force band with >= 90 % pass rate
 fgrid = exp(linspace(log(lo), log(hi), 60));
 bw = 0.25*log(hi/lo)/log(10);                   % sliding-window log-width, scaled to the range
 pr = arrayfun(@(f) mean(T.pass(abs(log(T.fscale) - log(f)) < bw)), fgrid);

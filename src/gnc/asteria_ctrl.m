@@ -1,20 +1,18 @@
 function [i_cmd, i_app, e] = asteria_ctrl(xh, t, P)
-% ASTERIA_CTRL  Gain-scheduled LQR on the axial and yaw channels, plus disturbance trim.
-%   xh    = EKF state [x y th vx vy om dx dy dth bg]
-%   t     = time along the reference
-%   i_cmd = commanded currents, i_app = after saturation (THIS is what the EKF must be fed).
-%   The lateral channel is not commandable with cant = 0 and is deliberately left alone.
-%
-%   i = i_ff(t)            feedforward from the optimised reference
-%     - K4(x_hat)*e        gain scheduled on the estimated gap
-%     + alloc(x_hat)*(-[m*dx_hat; J*dth_hat])   disturbance trim, min-norm over the rank-2 image
+% ASTERIA_CTRL  Gain-scheduled LQR on the axial and yaw channels with disturbance trim.
+%   [i_cmd, i_app, e] = asteria_ctrl(xh, t, P)
+%   xh     EKF state [x y th vx vy om dx dy dth bg]
+%   t      time along the reference [s]
+%   i_cmd  commanded currents; i_app saturated currents (the ones the EKF is fed)
+%   e      error [x - x_ref; th; vx - v_ref; om]
+%   i = i_ff - K4(x_hat)*e + A_alloc(x_hat)*(-[m*dx_hat; J*dth_hat])
+%   Lateral is not controlled (rank-2 input at cant = 0).
 x_ref = interp1(P.ref.t, P.ref.x, min(t,P.ref.T), 'linear', 'extrap');
 v_ref = interp1(P.ref.t, P.ref.v, min(t,P.ref.T), 'linear', 'extrap');
 i_ff  = interp1(P.ref.t, P.ref.i, min(t,P.ref.T), 'linear', 0);
 
-% Terminal phase: path-following. Reference taken at the ESTIMATED GAP, so timing errors no
-% longer turn into arrival-velocity errors. The position error is zero by construction; the slope
-% of v_ref(x) still supplies position feedback through the velocity gain.
+% inside path_gate the reference is indexed by the estimated gap, not by time
+% (position error zero by construction; v_ref(x) still gives position feedback)
 if isfield(P.ref,'path_gate') && xh(1) < P.ref.path_gate
     xg    = min(max(xh(1), P.ref.xp(1)), P.ref.xp(end));
     v_ref = interp1(P.ref.xp, P.ref.vp, xg, 'linear');
