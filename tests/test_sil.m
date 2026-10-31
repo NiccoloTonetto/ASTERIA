@@ -2,7 +2,7 @@
 % Same sensor data and measured currents into three implementations:
 %   REF  asteria_ekf / asteria_ctrl       MATLAB reference
 %   CG   cg_ekf_step / cg_ctrl            code-generation versions, interpreted
-%   MEX  cg_ekf_step_mex / cg_ctrl_mex    the same compiled by MATLAB Coder (build_cg)
+%   MEX  cg_ekf_step_mex / cg_ctrl_mex    the same compiled by MATLAB Coder (built if missing)
 % REF vs CG checks the rewrite, CG vs MEX checks the generated C.
 % Run after bench_init_3dof, optimize_maneuver, build_schedule; needs the logs from test_replay.
 assert(isfield(P,'sched'), 'run build_schedule first');
@@ -10,8 +10,16 @@ logfile = 'v5_1.csv';
 assert(exist(logfile,'file')==2, 'run test_replay first to create the logs');
 pc = make_cg_params(P);
 T  = readtable(logfile);  N = height(T);
+if exist('cg_ekf_step_mex','file') ~= 3 || exist('cg_ctrl_mex','file') ~= 3
+    fprintf('MEX files not found: running build_cg\n');
+    try
+        build_cg
+    catch ME
+        fprintf('build_cg failed: %s\n', ME.message);
+    end
+end
 use_mex = exist('cg_ekf_step_mex','file') == 3 && exist('cg_ctrl_mex','file') == 3;
-if ~use_mex, warning('MEX files not found: run build_cg first. Comparing REF vs CG only.'); end
+if ~use_mex, warning('No MEX files: comparing REF vs CG only.'); end
 
 clear asteria_ekf
 x0 = [T.tof1_m(find(T.tof_valid,1)) - P.tof.recess; zeros(9,1)];
@@ -45,5 +53,10 @@ end
 tol_state = 1e-9;  tol_i = 1e-9;
 ok = max(d_rc(:,1)) < tol_state && max(d_rc(:,2)) < tol_i;
 if use_mex, ok = ok && max(d_cm(:,1)) < tol_state && max(d_cm(:,2)) < tol_i; end
-if ok, fprintf('PASS: all implementations agree to below 1e-9\n');
-else,  fprintf('FAIL: implementations diverge -- compare step by step before trusting the C\n'); end
+if ~ok
+    fprintf('FAIL: implementations diverge; compare step by step before trusting the C\n');
+elseif use_mex
+    fprintf('PASS: all implementations agree to below 1e-9\n');
+else
+    fprintf('REF and CG agree to below 1e-9; compiled code not checked (no MEX)\n');
+end
