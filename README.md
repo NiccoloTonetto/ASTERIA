@@ -8,17 +8,21 @@ This repository contains the plant and force model, the estimator and controller
 
 ## Start here
 
-| If you are… | Read |
+| For | Read |
 | --- | --- |
+| a walkthrough of the model, controller, estimator and code, with exercises | [`docs/ONBOARDING.md`](docs/ONBOARDING.md) |
+| running the bench: procedures, tuning on hardware, performance, traps | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
+| calibrating the force model on the 1v1 rig | [`docs/CALIBRATION.md`](docs/CALIBRATION.md) |
 | integrating sensors, drivers or firmware | [`docs/ICD.md`](docs/ICD.md) — numbered requirements, frames, coil order, signs, the `gnc_step` interface, log format |
-| running the bench or the calibration campaign | [`docs/RUNBOOK.md`](docs/RUNBOOK.md) |
+| components and test equipment, with the reason for each | [`docs/BOM_INPUT.md`](docs/BOM_INPUT.md) |
 | tuning the filter on real data | [`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) |
+| open work, research directions and the timeline | [`docs/OPEN_POINTS.md`](docs/OPEN_POINTS.md) |
 
 ## Quick start
 
 ```matlab
 startup          % from the repository root: sets the path
-run_all_tests    % ~2 minutes; checks that this installation reproduces the reference results
+run_all_tests    % a few minutes; checks that this installation reproduces the reference results
 ```
 
 Expected: `plant`, `replay`, `precision`, `sil`, `simulink` report **pass**; `ekf`, `closed_loop`, `envelope`, `update_lut` report **ran** (they print tables to inspect). A **FAIL** or **ERROR** means the installation does not reproduce the reference: stop there.
@@ -43,7 +47,7 @@ P.mc.fs_range = [0.8 1.25]; monte_carlo               % robustness, 300 runs
 | `analysis` | Monte Carlo |
 | `tools` | log generator, replay, identification |
 | `tests` | all tests; `run_all_tests.m` at the root runs them |
-| `docs` | runbook, ICD, toolchain |
+| `docs` | onboarding, runbook, calibration, ICD, BOM input, toolchain, open points |
 | `data` | **measured** data, tracked: 1v1 calibration CSVs, bench logs worth keeping. Name files with date and rig, e.g. `2026-11-05_1v1_T1.csv` |
 
 Generated files (`asteria_model.slx`, results `*.mat`, simulated logs, `codegen/`, MEX files) are written to the repository root and ignored by git; every one of them is reproducible from the scripts. `asteria_calibration.mat` is generated too: commit the CSV it came from in `data/`, and regenerate it with `update_lut`.
@@ -71,6 +75,11 @@ Host SIL of the generated library on macOS also needs the full Xcode app (not on
 
 Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-## Maintainer
+## Contributing
 
-ASTERIA GNC lead. Report issues through this repository.
+- Every change passes `run_all_tests`; if it changes a reference number, the commit message says why.
+- Performance claims come from at least 60 seeds or the fixed-seed Monte Carlo (`RUNBOOK.md` §10).
+- Changes to the estimator or controller are made in both `src/gnc` and `src/embedded`; `test_sil` checks they agree.
+- Measured data goes in `data/` with date and rig in the name; generated files are not committed.
+- Design changes come with a short note in `docs/` stating the trade-offs.
+- Questions and issues go through this repository's issue tracker.

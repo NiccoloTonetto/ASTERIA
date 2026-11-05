@@ -1,18 +1,15 @@
-%% build_schedule.m  --  gain schedule along the reference approach
-% The plant changes by orders of magnitude between 100 mm and contact: the axial stiffness and
-% the control effectiveness both scale with the force, which grows like 1/x^2 near the faces.
-% A single LQR gain designed at 40 mm is not valid at 5 mm, so the gains are solved at a grid of
-% gaps along the reference and interpolated on the ESTIMATED gap at run time.
-% Same weights, same design, evaluated where the vehicle actually is.
+%% build_schedule.m  --  LQR gain schedule along the reference
 % Run after bench_init_3dof and optimize_maneuver. Writes P.sched.
+% At each grid gap: linearise at the reference current, solve the LQR with the same Q and R,
+% store K4 and the trim allocation. asteria_ctrl interpolates both on the estimated gap.
 
 assert(isfield(P,'ref'), 'run optimize_maneuver first');
-P.sched.x  = logspace(log10(5e-4), log10(P.traj.x0), 40).';   % log spacing: the plant scales
-                                   % like 1/x^2, and the schedule MUST reach below 1 mm -- the
-                                   % last millimetre is where the stiffness and the gains blow up.
+P.sched.x  = logspace(log10(5e-4), log10(P.traj.x0), 40).';   % log-spaced from 0.5 mm: the
+                                   % plant scales like a power of the gap and changes fastest
+                                   % in the last millimetre
 n  = numel(P.sched.x);
 P.sched.K4 = zeros(4,4,n);
-P.sched.A  = zeros(P.n_coil,2,n);   % pinv maps a (Fx, Mz) demand to four currents
+P.sched.A  = zeros(P.n_coil,2,n);   % (Fx, Mz) demand -> four currents
 Minv = diag([1/P.m, 1/P.m, 1/P.J]);
 sel  = [1 3 4 6];
 for k = 1:n

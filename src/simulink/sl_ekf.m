@@ -1,6 +1,6 @@
 function xh = sl_ekf(i_app, z, t)
-% Simulink wrapper for the EKF. State lives in persistent variables inside this function, not
-% in Simulink states, so it resets on t = 0 -- check that when you run multiple sims.
+% SL_EKF  Simulink wrapper for asteria_ekf. Filter state is persistent and reset at t = 0;
+%   the model's StartFcn also clears it.
 persistent P xh_ Pk_ k
 if isempty(P), P = evalin('base','P'); end
 if t <= 0 || isempty(xh_)

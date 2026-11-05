@@ -1,11 +1,11 @@
-%% run_all_tests.m  --  does this installation reproduce the reference results?
-% Run from the repository root after startup. About two minutes (plus ~10 s to build the MEX files if absent). To run a subset, set
-% tests_to_run first, e.g.  tests_to_run = {'plant','replay'};  run_all_tests
+%% run_all_tests.m  --  run the test suite and write test_report.txt
+% Run from the repository root after startup. A few minutes (plus MEX builds on first run).
+% Subset: tests_to_run = {'plant','replay'};  run_all_tests
 %
-% Verdicts: pass  -- the test printed its own PASS / checks passed
-%           ran   -- ran without error; it prints tables to inspect rather than a verdict
-%           FAIL / ERROR -- the installation does not reproduce the reference. Stop and look.
-% State is kept in root appdata because several test scripts clear the workspace.
+% Verdicts: pass        the test printed PASS / checks passed
+%           ran         ran without error; prints tables to inspect
+%           FAIL/ERROR  the installation does not reproduce the reference results
+% Runner state is kept in root appdata because some tests clear the workspace.
 if ~exist('tests_to_run','var') || isempty(tests_to_run), tests_to_run = 'all'; end
 rat_suite = { 'plant',       'test_plant';
               'ekf',         'test_ekf';
@@ -55,7 +55,7 @@ clear rat_*
 
 function v = rat_verdict(name, out)
 if strcmp(name, 'replay')
-    % fault injection is supposed to print FAIL for the faulty cases; check the signatures instead
+    % fault injection prints FAIL for the faulty cases by design: check the signatures
     L = splitlines(string(out));
     ok = any(startsWith(strtrim(L),'none') & contains(L,'consistent')) && ...
          any(contains(L,'ToF offset') & contains(L,'FLAGGED')) && ...

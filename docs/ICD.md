@@ -11,7 +11,7 @@ This document fixes what the electronics and integration team must build so the 
 | Document | ASTERIA-GNC-ICD-001 |
 | Revision | A — draft for review |
 | Date | 2026-10-01 |
-| Owner | GNC lead (Niccolò Tonetto) |
+| Owner | GNC lead |
 | Counterpart | Electronics and integration lead — TBD |
 | Approval | GNC lead, electronics lead, PM — pending |
 | Source of all numbers | `scripts/bench_init_3dof.m` in the asteria-gnc repository |
@@ -19,7 +19,7 @@ This document fixes what the electronics and integration team must build so the 
 
 **In scope:** the sensors, the coil drivers, the flight computer running `gnc_step`, the data log, and the bench items that constrain the electronics. **Out of scope:** the GNC algorithms and tuning (see `docs/RUNBOOK.md`), lateral control (excluded for the first test by PM decision), and the 1v1 calibration rig apart from its data format.
 
-**Applicable documents:** `docs/RUNBOOK.md` (procedures and performance), `docs/TOOLCHAIN.md` (replay and identification tools), and the datasheets of the VL53L1X time-of-flight sensor, the BMI088 IMU and the INA240 current-sense amplifier.
+**Applicable documents:** `docs/RUNBOOK.md` (procedures and performance), `docs/CALIBRATION.md` (1v1 calibration), `docs/BOM_INPUT.md` (components and test equipment), `docs/TOOLCHAIN.md` (replay and identification tools), and the datasheets of the VL53L1X time-of-flight sensor, the BMI088 IMU and the INA240 current-sense amplifier.
 
 ## 2. Conventions
 
@@ -206,8 +206,8 @@ Connectors, pinouts and board layout belong to the electronics team and are not 
 
 | Item | Requirement | Owner | Needed before | Status |
 | --- | --- | --- | --- | --- |
-| Lateral sensor part | SEN-04 | Electronics | chaser board design | TBD |
-| Processor and dev board | CPU-01 | Electronics | firmware work | TBD |
+| Lateral sensor part | SEN-04 | Electronics | chaser board design | proposed: VL53L4CD side-looking + reference rail (`BOM_INPUT.md`) |
+| Processor and dev board | CPU-01 | Electronics | firmware work | proposed: STM32H7 module on a carrier PCB; Nucleo-H743ZI2 for development (`BOM_INPUT.md`) |
 | Gyro: 2 ms decimation in firmware, or GNC re-verified at 1 ms | SEN-05 | GNC + electronics | firmware work | TBC |
 | Current-loop settling time | ACT-03 | Electronics | driver design | TBC |
 | Tick jitter limit | TIM-01 | Electronics | firmware work | TBC |
@@ -222,3 +222,4 @@ Connectors, pinouts and board layout belong to the electronics team and are not 
 | Rev | Date | Change |
 | --- | --- | --- |
 | A | 2026-10-01 | First formal issue. Supersedes the informal version of this file; adds requirement IDs and verification methods, the BMI088 output-rate correction (SEN-05) and VL53L1X addressing (SEN-02). |
+| A | 2026-10-31 | Draft update: §6.2 open items record the proposals in `BOM_INPUT.md` (lateral sensor, processor); applicable documents extended; owner given by role. Requirements unchanged. |

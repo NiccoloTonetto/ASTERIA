@@ -1,23 +1,16 @@
 function update_lut(csv_file)
-% UPDATE_LUT  Calibrate the force model from a measured 1v1 table and rebuild everything.
-%   update_lut('my_measurement.csv')
+% UPDATE_LUT  Fit the force model to a measured 1v1 table and rebuild reference and gains.
+%   update_lut('data/YYYY-MM-DD_1v1_T1.csv')   (run bench_init_3dof first)
 %
-% The 4v4 model generates the full 3-D force/torque field from two scalars -- the pole strength
-% per amp and the pole softening length. The 1v1 rig measures one coaxial pair, where the model
-% is exact in form, so those two scalars are fitted there and the geometry does the rest. There
-% is deliberately no tabulated 4v4 LUT: a table would only cover the aligned axis, and the
-% controller needs lateral and yaw derivatives too.
+% Fits the pole strength per amp q and the softening length x0 (asteria_axial_1v1) by least
+% squares on relative residuals, writes asteria_calibration.mat, then reruns bench_init_3dof,
+% optimize_maneuver and build_schedule in the base workspace. Procedure: docs/CALIBRATION.md.
 %
-% CSV FORMAT (header row required, any row order, SI units):
-%   gap_m, i_chaser_A, i_target_A, force_N
-%   gap_m      face-to-face gap
-%   force_N    ATTRACTIVE-positive axial force (what a balance or pendulum reads)
-% Include several currents and both signs of i_chaser if you can: a sign change that does not
-% flip the force means the rig is not in target-bias mode.
-%
-% Writes asteria_calibration.mat, which bench_init_3dof picks up automatically, then re-runs
-% bench_init_3dof, optimize_maneuver and build_schedule in the base workspace and prints the
-% new closed-loop eigenvalues. Delete asteria_calibration.mat to return to the geometry model.
+% CSV: header gap_m, i_chaser_A, i_target_A, force_N (SI units, any row order)
+%   gap_m    face-to-face gap
+%   force_N  axial force, attraction positive
+% Warns if the RMS misfit exceeds 15% or if negative chaser current never repels (rig not in
+% target-bias mode). Delete asteria_calibration.mat to return to the geometry model.
 
 T = readtable(csv_file);
 need = {'gap_m','i_chaser_A','i_target_A','force_N'};
@@ -29,7 +22,7 @@ assert(all(g >= 0) && all(isfinite(Fm)), 'gaps must be >= 0 and forces finite');
 Pb = evalin('base','P');                      % geometry-model starting point
 L  = Pb.coil.L;
 q0 = Pb.coil.q_perA/Pb.cal.scale;             % uncalibrated geometry value
-floorF = max(1e-6, 0.02*median(abs(Fm)));     % stops tiny forces dominating the relative fit
+floorF = max(1e-6, 0.02*median(abs(Fm)));     % keeps tiny forces from dominating the fit
 res = @(p) (asteria_axial_1v1(g, ic, it, exp(p(1)), exp(p(2)), L) - Fm)./max(abs(Fm), floorF);
 cost = @(p) sum(res(p).^2);
 p0 = [log(q0), log(Pb.cal.x0)];

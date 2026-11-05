@@ -1,11 +1,11 @@
 # ASTERIA 4v4 bench — GNC runbook
 
 **Status:** validated in simulation, embedded C generated and verified on the host, awaiting hardware.
-**Companion documents:** `ICD.md` (what the electronics must provide), `TOOLCHAIN.md` (replay and identification tools, with their validation evidence).
+**Companion documents:** `CALIBRATION.md` (1v1 calibration procedure), `ICD.md` (what the electronics must provide), `BOM_INPUT.md` (components and test equipment), `TOOLCHAIN.md` (replay and identification tools, with their validation evidence), `ONBOARDING.md` (design walkthrough), `OPEN_POINTS.md` (open work and timeline).
 
 ## 1. Scope and decisions
 
-The package flies the 4v4 bench axially and in yaw, closed loop, from a 60 mm start gap to bare face contact at −20 ± 10 mm/s. Lateral motion is passively stable and only monitored. The force model is a calibrated analytical pole model, not an electromagnetic simulation; **calibrating it on the 1v1 rig is mandatory before any hardware run**.
+The package flies the 4v4 bench axially and in yaw, closed loop, from a 60 mm start gap to bare face contact at −20 ± 10 mm/s. Lateral motion is not controlled: it is a weak spring while the coils attract and weakly unstable while they repel (braking); it is estimated and monitored. The force model is a calibrated analytical pole model, not an electromagnetic simulation; **calibrating it on the 1v1 rig is mandatory before any hardware run**.
 
 | Decision | Value | Why |
 | --- | --- | --- |
@@ -27,9 +27,9 @@ The package flies the 4v4 bench axially and in yaw, closed loop, from a 60 mm st
 3. The pipeline, in order, after any parameter change:
 
 ```mermaid
-flowchart LR
+flowchart TB
   A[bench_init_3dof] --> B[optimize_maneuver] --> C[build_schedule] --> D[build_simulink_model] --> E[sim asteria_model]
-  F[update_lut] -. rebuilds A to C .-> C
+  F[update_lut] -. reruns the first three steps .-> C
 ```
 
 `bench_init_3dof` prints which force model is loaded ("geometry model, UNCALIBRATED" or the calibration file). Read that line every time. The Monte Carlo (`monte_carlo`, 300 runs, ~75 s on a parallel pool) takes its force uncertainty from `P.mc.fs_range`: `[0.3 3]` uncalibrated, `[0.8 1.25]` after calibration.
@@ -40,7 +40,7 @@ flowchart LR
 
 **Estimator.** 10-state EKF `[x y θ vx vy ω dx dy dθ bg]`: pose, rates, three disturbance accelerations (the table tilt lives in `dx`), gyro bias. Inputs: two recessed ToF sensors (30 Hz), a lateral sensor (30 Hz), the gyro (500 Hz), and the measured coil currents. Range measurements are predicted from the pose one sensor latency ago.
 
-**Controller.** Gain-scheduled LQR on `[x θ vx ω]` (40 gaps, 0.5–100 mm), plus feedforward from the reference and a disturbance trim. Above 30 mm the reference is indexed by time; inside 30 mm it is indexed by the estimated gap.
+**Controller.** Gain-scheduled LQR on `[x θ vx ω]` (40 gaps, log-spaced from 0.5 mm to the start gap), plus feedforward from the reference and a disturbance trim. Above 30 mm the reference is indexed by time; inside 30 mm it is indexed by the estimated gap.
 
 **Reference.** A speed profile shaped for estimability: authority-limited acceleration far out, then a speed ramp over the last 30 mm to −20.7 mm/s at contact, so braking spans ~0.75 s and ~23 range samples rather than a few milliseconds.
 
@@ -68,7 +68,7 @@ The softening length `x0` (3.9 mm nominal) is the one phenomenological parameter
 
 | Step | Rig | Measures | Pass |
 | --- | --- | --- | --- |
-| T0 Coil characterisation | each coil, Hall probe on axis (take ±i, use half the difference to cancel Earth's field) | R, L, q per coil | all coils within ±5% in q |
+| T0 Coil characterisation | each coil, magnetometer on axis (take ±i, use half the difference to cancel Earth's field) | R, L, q per coil | all coils within ±5% in q |
 | T1 Axial force map | 1v1 on a 0.1 mg balance, coil on a 10–15 cm non-magnetic riser, gap zero set with a feeler gauge | force at gaps 2–100 mm × currents ±0.1/0.2/0.4 A, 3 repeats | RMS misfit < 5% at 5–100 mm; linear in current within 2% |
 | T2 Near-contact map | same, 0–10 mm every 0.5 mm, current up/down sweeps | hysteresis, force at zero chaser current | records the gap below which misfit exceeds 15% |
 | T3 Lateral stiffness | 1v1 on the air bearing, axially stopped | lateral oscillation period at 5–40 mm | within ±20% of the model |
@@ -77,7 +77,7 @@ The softening length `x0` (3.9 mm nominal) is the one phenomenological parameter
 | T6 In-situ identification | 4v4 closed loop at a fixed standoff, pseudo-random current injection | local force-per-amp, stiffness, yaw torque-per-amp | within ±15% of the model Jacobians |
 | T7 FEMM cross-check | axisymmetric 1v1 with the real B–H curve | where the pole model departs below 10 mm | within 10% above 10 mm |
 
-T1 is saved as CSV with header `gap_m,i_chaser_A,i_target_A,force_N` (attractive positive) and fitted with `update_lut('file.csv')`, which writes `asteria_calibration.mat` and rebuilds the reference and gains. Delete that file to return to the geometry model.
+T1 is saved as CSV with header `gap_m,i_chaser_A,i_target_A,force_N` (attractive positive) and fitted with `update_lut('file.csv')`, which writes `asteria_calibration.mat` and rebuilds the reference and gains. Delete that file to return to the geometry model. The step-by-step procedure for T0–T2 is in `CALIBRATION.md`.
 
 ### Does it transfer to flight?
 
@@ -85,7 +85,7 @@ The method does; the numbers do not. Scaling every dimension by λ at fixed curr
 
 ## 5. Before the first hardware run
 
-1. **Calibrate** on the 1v1 rig (T1, then T0/T2 as available) and run `update_lut`. Re-run `monte_carlo` with `P.mc.fs_range` set to the real calibration uncertainty; that is the pass rate to quote.
+1. **Calibrate** on the 1v1 rig (`CALIBRATION.md`: T0, T1, T2) and run `update_lut`. Re-run `monte_carlo` with `P.mc.fs_range` set to the real calibration uncertainty; that is the pass rate to quote.
 2. **Weigh** the complete floating chaser and set `P.m`; take `P.J` from CAD or a bifilar pendulum.
 3. **Level the table and measure the residual tilt**: release the float with the drives off, fit a parabola to range against time; acceleration = 2 × the quadratic term = 9.81 × sin(tilt). At 0.002° the float drifts ~7 cm in 20 s.
 4. **Pick the start gap from the tilt.** Keep the tilt below the right-hand column:
@@ -117,7 +117,7 @@ Hardware tuning loops when model errors get absorbed into the filter's noise par
 | S4 Standoff hold | closed loop at 40/20/10 mm, detuned then nominal, pseudo-random injection | process noise `sig_a`, `sig_al`; gain margin (scale gains to 1.5×) | NIS within bounds; Jacobians within 15% (T6) |
 | S5 Approaches | 10 runs from 60 mm | nothing: acceptance | arrival statistics inside the calibrated Monte Carlo |
 
-NIS bounds for N samples: mean within 1 ± 2√(2/N); innovation autocorrelation within ±2/√N at every lag.
+NIS bounds for N samples: mean within 1 ± 2√(2/N). Whiteness: the largest innovation autocorrelation over lags 1–20 within ±3.02/√N (the single-lag 2/√N bound with a correction for testing 20 lags at once).
 
 **Diagnostics, as measured by fault injection** (`test_replay`), not as first predicted:
 
@@ -151,7 +151,7 @@ How it got here, so nobody undoes it:
 - **ToF latency compensation has no measurable effect** at 20 ms: 90.7% pass with and without, paired difference −0.22 ± 0.32 mm/s over 294 identical scenarios. It stays on because it is physically right.
 - **Uncalibrated, the loop fails**: 44% pass over force 0.3–3× (measured with the earlier time-indexed controller; not re-run since). Calibration is not optional.
 
-Known limits: residual fast arrivals when the real actuator is stronger than modelled (1.08–1.25×: −23 to −24.5 mm/s median; 3 of 299 runs beyond −60 mm/s) — the target of the accelerometer force-scale state; no contact dynamics (the run stops at x = 0); lateral only monitored (~0.07 Hz undamped); planar model; coil inductance not in the plant.
+Known limits: residual fast arrivals when the real actuator is stronger than modelled (1.08–1.25×: −23 to −24.5 mm/s median; 3 of 299 runs beyond −60 mm/s) — the target of the accelerometer force-scale state; no contact dynamics (the run stops at x = 0); lateral only monitored (~0.07 Hz undamped while attracting, weakly unstable while braking, not scored by the Monte Carlo); planar model; coil inductance not in the plant.
 
 ## 8. Embedded code and verification
 
@@ -175,7 +175,7 @@ Known limits: residual fast arrivals when the real actuator is stronger than mod
 3. Generate with `cfg.VerificationMode = 'PIL'`, `cfg.Hardware = coder.hardware('<board>')`, `cfg.CodeExecutionProfiling = true`; run `test_sil_lib` against the PIL function.
 4. Accept: outputs within 1e-9 of MATLAB; worst-case `gnc_step` under 500 µs.
 
-## 9. Parameters you are expected to touch
+## 9. Parameters set from measurements and decisions
 
 All in `bench_init_3dof` unless noted. Anything else is derived or a deliberate decision.
 
@@ -205,7 +205,7 @@ Each produced a plausible-looking wrong result at least once. The fixes are in t
 | Trap | What happened | Where it is handled |
 | --- | --- | --- |
 | Symmetric drive | attract-only, cannot brake | `target_bias` drive |
-| Rank 2 | lateral cannot be commanded at cant = 0 | intended; do not "fix" |
+| Rank 2 | lateral is not independently commandable at cant = 0 (reachable only through yaw, very weakly) | intended for the first test; lateral control needs canted coils (`OPEN_POINTS.md`) |
 | Grounded Simulink input | a missing feedback line silently integrated from zero | line is in the build script |
 | Test value saved in a block | a disturbance stayed in the model for later runs | blocks read `P.test.*` only |
 | Leftover calibration file | recalibrates every later run | `bench_init_3dof` prints what it loaded |
@@ -213,18 +213,14 @@ Each produced a plausible-looking wrong result at least once. The fixes are in t
 | Feedforward at contact | inverse gain blew up to 565% of i_max | clamped |
 | EKF fed commanded current | disturbance state absorbed saturation | measured current |
 | Short gain schedule | a force error bounced the float away | schedule from 0.5 mm |
-| Minimum-time reference | braking in 80 ms with 2–3 range samples | shaped reference |
+| Minimum-time reference | braking in the last ~6 mm, ~0.1 s, ~3 range samples | shaped reference |
 | **Persistence family** | cached mass matrix, cached `P` in Simulink wrappers, Jacobian carried between runs, one parameter used for both sensor delay and filter belief — each silently ignored a change | rebuilt every call; `StartFcn`/`InitFcn` flushes; `clear asteria_ekf` per run; `P.test.tof_latency` split from `P.tof.latency` |
 | **Fitting a disconnected parameter** | a tilt "fit" optimised a value the EKF never read; its apparent success was `fminsearch`'s default initial step | never fit a parameter with no path into the replayed model |
 | **`fminsearch` zero start** | a zero-valued parameter is seeded with a 0.00025 step in its own units, so the fit stalls | fits start scaled and non-zero |
 | **Single-seed conclusions** | two "findings" were one or five noise realisations | performance claims from ≥ 60 seeds or the 300-run Monte Carlo |
 | Time-indexed terminal reference | late runs caught up and arrived fast | path-following inside 30 mm |
+| Broad ignore pattern | `*_sil.*` also ignored `tests/test_sil.m`, which was missing from the repository | generated SIL files ignored at the root only (`/*_sil.*`) |
 
-## 11. Next steps
+## 11. Open work
 
-1. 1v1 calibration campaign (T1, T0, T2) → `update_lut` → Monte Carlo with the real uncertainty.
-2. Processor choice and a dev board; firmware scheduler, drivers and logging around `gnc_step` (ICD); host library SIL, then PIL.
-3. Accelerometer force-scale state (simulation work) for the residual strong-actuator fast arrivals.
-4. FEMM cross-check (T7); validation camera setup.
-5. Hardware S1 → S5; then step the start gap to 80 and 100 mm.
-6. Later phase: canted coils for lateral control (system-level decision: a canted interface mates only at 0° and 180° roll); contact dynamics model.
+Open points, research directions and the timeline are in `OPEN_POINTS.md`.

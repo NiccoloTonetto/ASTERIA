@@ -1,6 +1,6 @@
-%% test_envelope.m  --  closed-loop envelope: how much tilt and how much force error it takes
-% Produces the two numbers the bench needs as requirements: the levelling spec, and the force
-% calibration error the loop can absorb. Run after build_schedule.
+%% test_envelope.m  --  closed-loop tolerance to table tilt and force-scale error
+% Sweeps tilt and force scale; gives the levelling spec and the calibration accuracy the loop
+% needs. Run after build_schedule.
 assert(isfield(P,'sched'), 'run build_schedule first');
 dt = P.Ts; tof_every = round(P.tof.Ts/dt); gyro_every = round(P.gyro.Ts/dt);
 n_tof = numel(P.tof.b);

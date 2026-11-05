@@ -1,6 +1,6 @@
 function W = cg_wrench(pc, xi, i) %#codegen
-% CG_WRENCH  Code-generation version of asteria_wrench: same pole model, plain scalar loops,
-%   fixed sizes, no implicit expansion. Must agree with asteria_wrench to rounding.
+% CG_WRENCH  Code-generation version of asteria_wrench: scalar loops, fixed sizes,
+%   no implicit expansion. Agrees with asteria_wrench to rounding (test_sil).
 mu0 = 4*pi*1e-7;  n = 4;  L = pc.L;  g = pc.g;  s = pc.s;
 qC = pc.qA*i(:);
 if pc.target_bias > 0, qT = pc.qA*pc.i_bias*ones(n,1); else, qT = qC; end

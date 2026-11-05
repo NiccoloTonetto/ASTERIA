@@ -1,15 +1,13 @@
 function R = replay_ekf(logfile, P, verbose)
 % REPLAY_EKF  Re-run the EKF over a recorded log and report whether it is consistent.
 %   R = replay_ekf('log.csv', P)
-%   Runs asteria_ekf on the logged sensors and MEASURED currents, then applies the three
-%   acceptance tests that decide whether a discrepancy is a tuning problem or a model problem:
-%     1. innovation mean    -> a bias means a calibration or force error, not noise
-%     2. NIS                -> the size of the innovations against the filter's own prediction
-%     3. whiteness          -> structure left in the innovations means an unmodelled effect
-%   With truth_* columns present it also reports the true error, which innovations alone
-%   cannot give. Nothing here is tuned: it only says what is wrong.
+%   Runs asteria_ekf on the logged sensors and measured currents and applies, per channel:
+%     1. innovation mean   bias = calibration or force error
+%     2. NIS               innovation size against the filter's prediction
+%     3. whiteness         remaining structure = unmodelled effect
+%   With truth_* columns it also reports the true estimation error.
 if nargin < 3, verbose = true; end
-clear asteria_ekf                      % no Jacobian carried over from another run
+clear asteria_ekf                      % reset the cached Jacobian
 T = readtable(logfile);
 dt = P.Ts;  n_tof = numel(P.tof.b);  nz = n_tof + P.lat.have + P.gyro.have;
 N  = height(T);
@@ -42,9 +40,8 @@ for j = 1:nz
     mu    = mean(v);              sd_mu = sqrt(mean(sj)/n);     % expected spread of the mean
     nis   = mean(v.^2./sj);       nis_tol = 2*sqrt(2/n);
     ac    = xcorr(v - mu, 20, 'coeff');  ac = ac(22:end);       % lags 1..20
-    % the bound is on the MAX over 20 lags, so it needs a multiple-comparison
-    % correction; 2/sqrt(n) is the single-lag bound and would flag noise as structure
-    ac_tol = norminv(1 - 0.025/20)/sqrt(n);
+    % bound on the max over 20 lags (Bonferroni): z_(1-0.025/20)/sqrt(n) ~ 3.02/sqrt(n)
+    ac_tol = sqrt(2)*erfinv(1 - 0.05/20)/sqrt(n);
     ok_mu = abs(mu) < 3*sd_mu;  ok_nis = abs(nis-1) < nis_tol;  ok_ac = max(abs(ac)) < ac_tol;
     R.stats(j) = struct('name',names(j),'n',n,'mean',mu,'mean_tol',3*sd_mu, ...
                         'nis',nis,'nis_tol',nis_tol,'ac_max',max(abs(ac)),'ac_tol',ac_tol, ...

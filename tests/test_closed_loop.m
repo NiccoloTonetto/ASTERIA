@@ -1,7 +1,6 @@
-%% test_closed_loop.m  --  full loop: plant + sensors + EKF + scheduled LQR
-% Progression: perfect state first (isolates the controller), then through the estimator, then
-% with everything wrong at once -- noise, table tilt, and a plant whose force is 1.5x the model.
-% Run after bench_init_3dof, optimize_maneuver, build_schedule.
+%% test_closed_loop.m  --  plant + sensors + EKF + scheduled LQR
+% Cases: perfect state, EKF clean, EKF + noise, EKF + noise + tilt, and all of them with a truth
+% plant 1.5x stronger than the model. Run after bench_init_3dof, optimize_maneuver, build_schedule.
 
 assert(isfield(P,'sched'), 'run build_schedule first');
 dt = P.Ts;  tof_every = round(P.tof.Ts/dt);  gyro_every = round(P.gyro.Ts/dt);
@@ -17,7 +16,7 @@ for r = 1:size(runs,1)
     [nm, noisy, dtrue, fscale, use_ekf] = runs{r,:};
     clear asteria_ekf
     rng(1);
-    Pp = P;  Pp.coil.q_perA = P.coil.q_perA*sqrt(fscale);     % TRUTH plant (controller keeps P)
+    Pp = P;  Pp.coil.q_perA = P.coil.q_perA*sqrt(fscale);     % truth plant; controller keeps P
     s  = [P.ref.x(1); 0; 0; 0; 0; 0];
     xh = [P.ref.x(1); 0; 0; 0; 0; 0; 0; 0; 0; 0];
     Pk = P.ekf.P0;  k = 0;  trk = [];  nsat = 0;

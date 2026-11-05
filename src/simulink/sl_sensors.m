@@ -1,11 +1,8 @@
 function z = sl_sensors(s, t, noise_on)
-% Sensor model with multirate sampling and noise. Returns NaN in any channel that has no new
-% sample at this step -- that is the contract asteria_ekf expects.
+% SL_SENSORS  Multirate sensor model with noise and ToF latency. NaN where no new sample.
 persistent P
 if isempty(P), P = evalin('base','P'); end
-% The range sensors see the pose as it was one latency ago, so keep a short history of the
-% true state and sample it delayed. Without this the model is optimistic in exactly the
-% way the EKF now compensates for, and the two cancel into a false result.
+% ToF ranges see the pose P.test.tof_latency ago: delay line on the true state
 persistent buf
 nd = max(round(P.test.tof_latency/P.Ts), 0);
 if isempty(buf) || t <= 0, buf = repmat(s(:), 1, nd+1); end

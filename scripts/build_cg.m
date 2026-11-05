@@ -1,6 +1,5 @@
-%% build_cg.m  --  compile the embedded EKF and controller to C (MEX for SIL)
-% The example inputs fix every size at compile time; the parameter struct is an INPUT, not a
-% compiled-in constant, so recalibrating means regenerating pc, not recompiling.
+%% build_cg.m  --  compile the embedded EKF and controller to MEX (used by test_sil)
+% pc is an input, not a compiled-in constant: a recalibration regenerates pc, not the code.
 assert(isfield(P,'sched'), 'run build_schedule first');
 pc  = make_cg_params(P);
 xh  = zeros(10,1);  Pk = zeros(10);  Kp = zeros(3);  ii = zeros(4,1);  z = zeros(4,1);

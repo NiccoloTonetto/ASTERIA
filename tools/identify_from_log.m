@@ -3,24 +3,19 @@ function est = identify_from_log(logfile, P, stage)
 %   est = identify_from_log('log.csv', P, stage)
 %     'rest'    (S1) sensor offsets, scales, noise, gyro and accelerometer bias
 %     'drift'   (S2) table tilt: parabola through the range, cross-checked by the EKF
-%     'latency' (S2) ToF measurement delay -- REQUIRES truth columns (the camera)
+%     'latency' (S2) ToF measurement delay; needs truth columns (validation camera)
 %     'pulse'   (S3) force scale, by fitting the open-loop trajectory
 %
-%   Each stage estimates only what it owns. Nothing is applied automatically.
-%
-%   Why latency is separate: a constant delay during motion at constant velocity puts the
-%   estimate a fixed v*tau behind the truth while leaving the innovations zero-mean and white.
-%   The filter is then perfectly self-consistent and wrong, which is exactly the failure the
-%   innovations cannot see. Identifying it needs either an external truth (camera) or a direct
-%   electrical measurement of the sensor timing. Do not try to fit it from innovations.
+%   Each stage estimates only its own parameters; nothing is applied to P automatically.
+%   Latency cannot be identified from innovations (a constant delay leaves them zero-mean and
+%   white): it needs truth or a timing measurement on the sensor's data-ready line.
 T = readtable(logfile);
 n_tof = numel(P.tof.b);
 est = struct('stage', stage);
 
 switch lower(stage)
 case 'rest'
-    % Clamped at known gaps: the residual against truth gives offset, scale and noise per
-    % sensor. This is a measurement, not a fit; it is what freezes R for good.
+    % clamped at known gaps: offset, scale and noise per sensor (sets Rd)
     v = T.tof_valid == 1;
     gap_true = T.truth_x(v);
     for j = 1:n_tof
@@ -38,30 +33,24 @@ case 'rest'
     est.note = 'set the ToF offsets/scales, P.tof.sigma, the gyro bias prior; freeze R after this';
 
 case 'drift'
-    % Drives off: the only force is the disturbance (table tilt). Two independent estimates,
-    % which must agree:
-    %   1. model-free: a parabola through the raw range; acceleration = 2 x quadratic term
-    %   2. the EKF's own disturbance state, averaged over the second half of a replay
-    % WARNING, learned the hard way: an earlier version "fitted" the tilt by likelihood through
-    % a prior the EKF never read, so the cost was flat. Its apparent success was fminsearch's
-    % default initial step (2.5e-4) landing on the injected value (2.57e-4). Never fit a
-    % parameter that has no path into the model being replayed.
+    % drives off, the only force is the disturbance; two independent estimates that must agree:
+    %   1. parabola through the raw range, acceleration = 2 x quadratic coefficient
+    %   2. EKF disturbance state averaged over the second half of a replay
     v = T.tof_valid == 1;  t = T.t_s(v);  r = mean([T.tof1_m(v), T.tof2_m(v)], 2);
     pf = polyfit(t, r, 2);
     est.tilt_acc_parabola = 2*pf(1);
     R  = replay_ekf(logfile, P, false);
     h2 = round(size(R.est,1)/2):size(R.est,1);
     est.tilt_acc_ekf = mean(R.est(h2,7));
-    est.tilt_acc = est.tilt_acc_parabola;            % the model-free one is the reference
+    est.tilt_acc = est.tilt_acc_parabola;            % model-free estimate is the reference
     est.tilt_deg = asind(min(abs(est.tilt_acc)/9.81,1))*sign(est.tilt_acc);
     est.agree = abs(est.tilt_acc_ekf - est.tilt_acc_parabola) < ...
                 0.15*abs(est.tilt_acc_parabola) + 2e-5;
     est.note = 'tilt is a property of the table; if the two estimates disagree, suspect timestamps';
 
 case 'latency'
-    % Needs truth. Sweep the delay and take the one that minimises the replay's position error
-    % against the camera. Use a log with CHANGING velocity: at constant velocity every delay
-    % gives the same innovations and only the truth separates them.
+    % sweep the delay, minimise the replay's position error against truth;
+    % needs a log with changing velocity
     assert(ismember('truth_x', T.Properties.VariableNames), ...
            'latency identification needs truth columns (camera) in the log');
     f = @(tau) truth_rms(logfile, set_latency(P, tau));
@@ -76,15 +65,11 @@ case 'latency'
     est.note = 'set P.tof.latency; also worth measuring electrically on the data-ready line';
 
 case 'pulse'
-    % Open loop with known currents: the filter is not involved. Fit the force scale by
-    % replaying the PLANT against the measured trajectory.
-    % Fit the force scale TOGETHER with the initial state. The trajectory is started from a
-    % single range sample, whose 5 mm noise is the same size as the effect being measured;
-    % fitting x0 and v0 alongside the scale removes that leverage.
+    % open loop with known currents: fit the plant (not the filter) to the measured trajectory,
+    % force scale jointly with the initial gap and velocity
     f  = @(q) pulse_cost(T, P, q);
     q0 = [1; 1; 1];                       % [scale; x0 offset in mm; v0 in mm/s]
-    % non-zero start: fminsearch seeds its simplex with 5% of each value, and a zero
-    % entry gets 0.00025 in ITS units -- a quarter of a micrometre here.
+    % non-zero start: fminsearch scales its initial simplex by each value
     q  = fminsearch(f, q0, optimset('TolX',1e-4,'TolFun',1e-10, ...
                                     'MaxFunEvals',600,'Display','off'));
     est.force_scale = q(1);

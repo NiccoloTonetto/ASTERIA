@@ -1,25 +1,23 @@
 %% optimize_maneuver.m  --  reference profile for the axial approach
-% The minimum-time profile (accelerate hard, reverse at a switch point) put the whole braking
-% phase into the last ~6 mm and ~80 ms. At a 30 Hz range update that window holds two or three
-% measurements, so any force-model error lands at contact uncorrected. The reference is
-% therefore shaped deliberately slower than time-optimal:
+% Run after bench_init_3dof. Writes P.ref (time-indexed and gap-indexed reference, feedforward).
 %
-%   v_des(x) = -min( v_cap, sqrt(vf^2 + 2*beta*W(x)) ),   W(x) = integral of a_avail from 0 to x
-%
-% i.e. the speed at every gap is set by the braking energy actually available from there to
-% contact, using only a fraction beta of it. Braking then starts far out and lasts of order a
-% second instead of 80 ms, which is what gives the estimator time to work. alpha caps the
-% acceleration side the same way, leaving (1-alpha) of the current for feedback.
-% Run after bench_init_3dof. Writes P.ref.
+% A reference vehicle chases a desired speed profile
+%   v_des(x) = -min(v_cap, |vf| + (v_cap - |vf|)*x/x_gate)
+% with acceleration limited to +-alpha*a_avail(x), where a_avail is the axial authority at
+% full current. The speed ramps down to vf over the last x_gate, so braking spans ~0.75 s
+% and ~20 range samples (a minimum-time profile brakes in ~0.1 s, see RUNBOOK section 10),
+% and (1 - alpha) of the current is left for feedback.
+% The feedforward current is i_ff = m*a_ref/g1(x), g1 the axial force per amp of common-mode
+% current.
 
 assert(exist('P','var')==1, 'run bench_init_3dof first');
-P.ref.alpha = 0.5;      % fraction of authority the reference may use to accelerate
+P.ref.alpha = 0.5;      % fraction of the authority the reference may use
 P.ref.x_gate = 0.030;   % [m] gap at which the terminal speed ramp starts
 P.ref.v_cap  = 0.040;   % [m/s] speed cap / speed at the gate
-P.ref.kv     = 20;      % [1/s] how hard the reference vehicle chases v_des
+P.ref.kv     = 20;      % [1/s] speed-tracking gain of the reference vehicle
 vf = P.traj.vf;  x0 = P.traj.x0;
 
-% axial authority per unit mass, and the per-amp axial gain, on a grid
+% axial force per amp and authority per unit mass on a gap grid
 xg = [linspace(0, 0.02, 400), linspace(0.0205, x0, 600)].';
 g1 = zeros(size(xg));                      % [N/A] axial force per amp of common-mode current
 for k = 1:numel(xg)
@@ -27,7 +25,7 @@ for k = 1:numel(xg)
     g1(k) = w(1);
 end
 a_avail = abs(g1)*P.i_max/P.m;             % [m/s^2]
-W  = cumtrapz(xg, a_avail);                % braking energy per unit mass available from 0 to x
+W  = cumtrapz(xg, a_avail);                % braking work per unit mass available from 0 to x
 v_des = @(x) -min(P.ref.v_cap, abs(vf) + (P.ref.v_cap-abs(vf))*min(max(x,0),x0)/P.ref.x_gate);
 aav   = @(x) interp1(xg, a_avail, min(max(x,0),x0), 'linear','extrap');
 gg    = @(x) interp1(xg, g1,      min(max(x,0),x0), 'linear','extrap');
@@ -40,9 +38,7 @@ P.ref.T = sol.x(end);
 P.ref.t = tt;  P.ref.x = ss(:,1);  P.ref.v = ss(:,2);
 P.ref.a = arrayfun(@(k) acmd(ss(k,1), ss(k,2)), (1:numel(tt)).');
 P.ref.i = P.m*P.ref.a./gg(P.ref.x);
-% The per-amp axial gain vanishes AT contact (softened poles: the facing-pole separation goes
-% to zero), so inverting it blows the feedforward up in the last fraction of a millimetre.
-% The acceleration there is negligible anyway; clamp to the authority the reference is allowed.
+% g1 goes to zero at contact (softened poles), so the inverse is clamped to +-alpha*i_max
 P.ref.i = max(min(P.ref.i, P.ref.alpha*P.i_max), -P.ref.alpha*P.i_max);
 P.ref.t_term = P.ref.T - interp1(P.ref.x(end:-1:1), tt(end:-1:1), 0.020);   % time inside 20 mm
 [~, ipk] = max(abs(P.ref.v));
@@ -53,20 +49,13 @@ fprintf('T = %.1f s   peak speed %.1f mm/s at x = %.1f mm   arrival %.1f mm/s\n'
 fprintf('last 20 mm take %.2f s  (=> %.0f ToF samples, %.0f gyro samples)\n', ...
         P.ref.t_term, P.ref.t_term/P.tof.Ts, P.ref.t_term/P.gyro.Ts);
 fprintf('peak reference current %.3f A = %.0f%% of i_max\n', max(abs(P.ref.i)), 100*max(abs(P.ref.i))/P.i_max);
-% The reference is feasible BY CONSTRUCTION (a_cmd is clamped to alpha*a_avail), so what is
-% worth reporting is how much of the run sits ON that clamp: that is the authority-limited
-% phase, where the profile is doing all it can rather than tracking v_des.
+% fraction of the approach spent on the authority limit
 on_clamp = abs(abs(P.ref.a) - P.ref.alpha*aav(P.ref.x)) < 1e-9*max(aav(P.ref.x));
 fprintf('authority-limited for %.0f%% of the approach; clamp releases at x = %.0f mm\n', ...
         100*mean(on_clamp), 1e3*P.ref.x(find(~on_clamp,1,'first')));
 
-% Gap-indexed copy of the reference, for path-following inside P.ref.path_gate. The arrival spec
-% is a function of GAP, so near contact the controller tracks the reference at the estimated gap,
-% not at the current time. With a time-indexed reference, a run that falls behind catches up and
-% arrives fast: arrival velocity correlated +0.81 with timing error over 60 noisy runs.
-% Store the reference at 401 points, not the integration grid. The embedded code carries these
-% tables as constants: at 4001 points they were 233 kB, at 401 about 23 kB. Linear interpolation
-% between 13 ms samples is far below anything the loop can resolve (checked by Monte Carlo).
+% Tables stored at 401 points (embedded constants ~23 kB; 4001 points gave the same Monte Carlo
+% result). xp/vp/ip: gap-indexed copy used for path-following inside P.ref.path_gate.
 P.ref.n_table = 401;
 tt_ = linspace(0, P.ref.T, P.ref.n_table).';
 P.ref.x = interp1(P.ref.t, P.ref.x, tt_);  P.ref.v = interp1(P.ref.t, P.ref.v, tt_);
@@ -85,7 +74,7 @@ for xq = [100 60 40 20 10 5 2 1]
     end
 end
 
-%% Sensitivity of the arrival velocity to the force calibration, OPEN LOOP
+%% Open-loop sensitivity of the arrival velocity to the force scale
 fprintf('\n-- open loop, reference currents replayed into a mis-calibrated plant --\n');
 fprintf('%10s %12s\n','force x','v_end[mm/s]');
 i_of_t = @(t) interp1(P.ref.t, P.ref.i, min(t,P.ref.T), 'linear', 'extrap');

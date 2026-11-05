@@ -1,7 +1,6 @@
-%% test_update_lut.m  --  does update_lut recover a calibration it was not told?
-% Builds a fake 1v1 measurement from KNOWN "true" parameters (different from the model's),
-% adds noise, runs update_lut on it, and checks the fitted values. Cleans up after itself:
-% a leftover asteria_calibration.mat would silently recalibrate every later run.
+%% test_update_lut.m  --  update_lut recovers known calibration parameters
+% Synthetic 1v1 data from known q and x0 (different from the model's) with 3% noise; checks
+% the fit, then deletes asteria_calibration.mat and restores the geometry model.
 assert(exist('P','var')==1, 'run bench_init_3dof first');
 cal_file = 'asteria_calibration.mat';
 assert(~exist(cal_file,'file'), 'a real calibration file exists -- move it before running this test');
