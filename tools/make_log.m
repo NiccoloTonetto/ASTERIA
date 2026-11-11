@@ -13,6 +13,7 @@ function make_log(P, scenario, c, outfile)
 %      c.i_pulse (pulse only) [amplitude A, start s, stop s]
 %   The CSV has the channels of a hardware log (ICD 5.2) plus truth_* columns, which on
 %   hardware come from the validation camera.
+clear asteria_ekf                                  % reset the cached Jacobian
 rng(c.seed);
 dt = P.Ts;  n_tof = numel(P.tof.b);
 Pp = P;                                          % truth plant
