@@ -149,7 +149,7 @@ How it got here, so nobody undoes it:
 
 - **Time-indexed tracking caused the fast-arrival bias.** Over 60 noisy runs arrival correlated +0.81 with timing error: late runs caught up and arrived fast. Path-following inside 30 mm dropped the correlation to −0.04 and raised the pass rate from 90.7% to 96.0%.
 - **ToF latency compensation has no measurable effect** at 20 ms: 90.7% pass with and without, paired difference −0.22 ± 0.32 mm/s over 294 identical scenarios. It stays on because it is physically right.
-- **Uncalibrated, the loop fails**: 44% pass over force 0.3–3× (measured with the earlier time-indexed controller; not re-run since). Calibration is not optional.
+- **Uncalibrated, the loop fails**: 49.0% pass over force 0.3–3× with path-following, ≥ 90% only within 0.77–1.27× ([A7 report](reports/2026-11_A7_uncalibrated_monte_carlo.md)). Calibration is not optional.
 
 Known limits: residual fast arrivals when the real actuator is stronger than modelled (1.08–1.25×: −23 to −24.5 mm/s median; 3 of 299 runs beyond −60 mm/s) — the target of the accelerometer force-scale state; no contact dynamics (the run stops at x = 0); lateral only monitored (~0.07 Hz undamped while attracting, weakly unstable while braking, not scored by the Monte Carlo); planar model; coil inductance not in the plant.
 

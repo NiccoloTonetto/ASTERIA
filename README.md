@@ -17,6 +17,7 @@ This repository contains the plant and force model, the estimator and controller
 | components and test equipment, with the reason for each | [`docs/BOM_INPUT.md`](docs/BOM_INPUT.md) |
 | tuning the filter on real data | [`docs/TOOLCHAIN.md`](docs/TOOLCHAIN.md) |
 | open work, research directions and the timeline | [`docs/OPEN_POINTS.md`](docs/OPEN_POINTS.md) |
+| results of finished open points | [`docs/reports/`](docs/reports/) |
 
 ## Quick start
 

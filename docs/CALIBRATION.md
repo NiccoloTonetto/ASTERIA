@@ -4,7 +4,7 @@ Calibration of the force model on the 1v1 rig: why it is needed, what it changes
 
 ## 1. Purpose, files and parameters
 
-**Why.** The 4v4 force model computes every force and torque from the coil geometry, but its absolute strength is a physics estimate good to roughly a factor of two (finite coil length, core shape and the winding's own contribution are approximated). The loop needs the force within about ±12–15%. In the Monte Carlo, with the force anywhere in 0.3–3× of the model, 44% of approaches pass; after calibration to ±20%, 96% do. A single coaxial pair is where the model's form is exact, so measuring it fixes the constants and the 4v4 geometry does the rest.
+**Why.** The 4v4 force model computes every force and torque from the coil geometry, but its absolute strength is a physics estimate good to roughly a factor of two (finite coil length, core shape and the winding's own contribution are approximated). The loop needs the force within about ±12–15%. In the Monte Carlo, with the force anywhere in 0.3–3× of the model, 49% of approaches pass; after calibration to ±20%, 96% do. A single coaxial pair is where the model's form is exact, so measuring it fixes the constants and the 4v4 geometry does the rest.
 
 **The two fitted parameters**
 
