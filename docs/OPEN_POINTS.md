@@ -49,7 +49,7 @@ flowchart TB
 
 **November 2026**
 - Reproduce the baseline (`run_all_tests`, `ONBOARDING.md`).
-- A7: re-run the uncalibrated Monte Carlo with path-following, for the proposal.
+- A7 done: 49.0% uncalibrated pass rate with path-following, for the proposal ([report](reports/2026-11_A7_uncalibrated_monte_carlo.md)).
 - Draft the GNC part of the ESA proposal: objectives, architecture, simulation evidence, test plan, what the facility adds (F2).
 - Agree the log format (ICD §5.2) with electronics and start the logger (D3).
 - Prepare the 1v1 calibration rig and equipment (`CALIBRATION.md`, `BOM_INPUT.md` E1–E7).
@@ -78,13 +78,13 @@ flowchart TB
 
 | # | Open point | Why it matters | Starting point | When |
 | --- | --- | --- | --- | --- |
-| A1 | Calibrate the force model on the 1v1 rig (T0, T1, T2) and quote the Monte Carlo with the real uncertainty | uncalibrated, the model is a factor-of-two estimate and the loop is not flyable (44% pass) | `CALIBRATION.md`, `update_lut`, `monte_carlo` | Dec 2026 |
+| A1 | Calibrate the force model on the 1v1 rig (T0, T1, T2) and quote the Monte Carlo with the real uncertainty | uncalibrated, the model is a factor-of-two estimate and the loop is not flyable (49% pass, A7) | `CALIBRATION.md`, `update_lut`, `monte_carlo` | Dec 2026 |
 | A2 | Near-contact physics: induced magnetisation between the cores, local saturation, hysteresis. Where does the pole model stop being valid, and does a richer model (pole + induced dipole, or a FEM force map) change the controller in the last millimetres? | all the braking happens below ~20 mm, and the model is weakest there | T2 data; FEMM axisymmetric 1v1 with the real B–H curve (T7); `asteria_wrench` | design phase |
 | A3 | Coil-to-coil spread: per-coil strengths if T0 shows more than ±5% | a weaker coil turns into an unwanted yaw torque; the 1v1 fit only sees the product of two coils | T0 data; `asteria_wrench` (one `q` per coil) | after T0 |
 | A4 | Electrical and dynamic effects: coil inductance in the plant, driver dynamics, eddy currents in brackets, force lag at current reversal (T5) | braking is a current reversal; a lag there acts like a delay in the fastest part of the loop | `mc_run` (current lag), T5, LCR data | design phase |
 | A5 | Thermal behaviour: winding temperature rise during a run and between runs, its effect on `i_max` and on the drivers, coil temperature stop (SAF-03) | `i_max` and therefore R in the LQR depend on the hot resistance | `bench_init_3dof` (`P.coil.dT`), target current and bus voltage logs | design phase |
 | A6 | Scale-up to flight coils: core saturation, when the linear pole model stops holding, magnetic cleanliness of the spacecraft | the method transfers to flight, the numbers do not (`RUNBOOK.md` §4) | scaling argument in the runbook; FEM | later |
-| A7 | Re-run the uncalibrated Monte Carlo (`fs_range = [0.3 3]`) with path-following | the 44% figure predates path-following and will be quoted in the proposal | `monte_carlo` | 13 Nov 2026 |
+| A7 | Re-run the uncalibrated Monte Carlo (`fs_range = [0.3 3]`) with path-following. **Done:** 49.0% pass, ≥ 90% within 0.77–1.27× | quoted in the proposal; replaces the 44% measured before path-following | [report](reports/2026-11_A7_uncalibrated_monte_carlo.md) | done, 11 Nov 2026 |
 
 ## B. Estimation
 
@@ -104,7 +104,7 @@ flowchart TB
 | C1 | Time-varying LQR along the reference (Riccati differential equation solved offline), compared with the frozen-gap schedule | the frozen-time assumption fails for the slow axial mode near contact (`ONBOARDING.md`, gain schedule); a time-varying design removes it at the same online cost | `build_schedule`, `asteria_ctrl`, Monte Carlo | design phase |
 | C2 | Constraint-aware and robust control: MPC (outer loop) over the LQR, robust designs against the force-scale uncertainty, behaviour at current saturation near contact | the long-term architecture is still open; the reference now handles constraints by design, using at most half the authority | `asteria_ctrl`, `cg_ctrl`, Monte Carlo, PIL timing budget | design phase |
 | C3 | Reference design: retune `alpha`, `v_cap`, `x_gate`, `path_gate`; longer start gaps with less tilt tolerance | arrival statistics and tilt tolerance trade against approach time | `optimize_maneuver`, `test_envelope`, start-gap/tilt table (`RUNBOOK.md` §5) | design phase |
-| C4 | Lateral motion: drift during braking (repulsion makes the lateral direction unstable), a lateral requirement, limits on repulsive current near contact; canted coils (rank 3, but the third singular value is ~250× smaller at 8°; a canted interface mates only at 0° and 180° roll) | the Monte Carlo does not score lateral offset; lateral control is a system-level decision | `T.y_end` in `mc_results.mat`, cant sweep in `bench_init_3dof` §5 | Nov 2026 (check), design phase (decision) |
+| C4 | Lateral motion: drift during braking (repulsion makes the lateral direction unstable), a lateral requirement, limits on repulsive current near contact; canted coils (rank 3, but the third singular value is ~250× smaller at 8°; a canted interface mates only at 0° and 180° roll) | the Monte Carlo does not score lateral offset (in A7, 8 of 147 passing runs end more than 10 mm off-axis, and above 2× force the float drifts hundreds of millimetres sideways); lateral control is a system-level decision | `T.y_end` in `mc_results.mat`, cant sweep in `bench_init_3dof` §5 | Nov 2026 (check), design phase (decision) |
 | C5 | Contact dynamics: impact, rebound, settling after x = 0; what arrival velocity a latch needs | every run stops at contact today; the arrival requirement has no model behind it | `asteria_plant` (contact model), T2 data, capture mechanism concept | design phase |
 | C6 | Out-of-plane effects: interfaces not parallel (roll, pitch), height offset, a 6-DoF model; Earth's field torque | the model is planar; in orbit all six degrees of freedom are free | `asteria_wrench` (3-D poles already), new plant | design phase |
 

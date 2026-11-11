@@ -110,7 +110,7 @@ $$\mathbf{F}_{ab} = \frac{\mu_0\, q_a q_b}{4\pi}\,\frac{\mathbf{r}_{ab}}{\left(|
 Two consequences to remember:
 
 - **Force is proportional to $q^2$**, because both sides scale with `P.cal.scale`. A 20% error in $q$ is a 44% error in force.
-- **Uncalibrated, the model is a factor-of-two estimate.** The 1v1 calibration (`update_lut` on the T1 force map, see `CALIBRATION.md`) fits $q$ and $x_0$ and brings this to a few percent. The loop needs ±12–15%. Calibration is not optional: uncalibrated, the Monte Carlo pass rate is 44%.
+- **Uncalibrated, the model is a factor-of-two estimate.** The 1v1 calibration (`update_lut` on the T1 force map, see `CALIBRATION.md`) fits $q$ and $x_0$ and brings this to a few percent. The loop needs ±12–15%. Calibration is not optional: uncalibrated, the Monte Carlo pass rate is 49%.
 
 What the model gets right regardless of the constants: the far-field dipole law, linearity in current, the rank-2 structure, and which modes are unstable. What it does not contain: induced magnetisation between the cores (it dominates in the last millimetres), hysteresis, eddy currents, Earth's field (align the docking axis with magnetic north), and coil inductance in the plant.
 
