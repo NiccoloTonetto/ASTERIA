@@ -1,5 +1,6 @@
 function z = sl_sensors(s, t, noise_on)
 % SL_SENSORS  Multirate sensor model with noise and ToF latency. NaN where no new sample.
+%   Only the ranges are delayed; the gyro reads the current yaw rate, as in mc_run and make_log.
 persistent P
 if isempty(P), P = evalin('base','P'); end
 % ToF ranges see the pose P.test.tof_latency ago: delay line on the true state
@@ -20,6 +21,6 @@ if abs(mod(t, P.tof.Ts)) < tol || abs(mod(t, P.tof.Ts) - P.tof.Ts) < tol
     end
 end
 if P.gyro.have && (abs(mod(t, P.gyro.Ts)) < tol || abs(mod(t, P.gyro.Ts) - P.gyro.Ts) < tol)
-    z(end) = zt(end) + noise_on*P.gyro.sigma*randn;
+    z(end) = s(6) + P.gyro.bias + noise_on*P.gyro.sigma*randn;   % the gyro is not delayed
 end
 end
